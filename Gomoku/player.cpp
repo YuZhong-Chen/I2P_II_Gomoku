@@ -1,8 +1,18 @@
+#include <algorithm>
 #include <array>
+#include <climits>
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
 
 enum SPOT_STATE
 {
@@ -51,8 +61,10 @@ int main(int, char **argv)
 {
     std::ifstream fin(argv[1]);
     std::ofstream fout(argv[2]);
+
     read_board(fin);
     write_valid_spot(fout);
+
     fin.close();
     fout.close();
     return 0;
