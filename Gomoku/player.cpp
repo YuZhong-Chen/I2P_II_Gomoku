@@ -37,6 +37,7 @@ typedef struct
     bool BoardExistChestY[GAMEBOARD_SIZE] = {false};
     array<array<int, GAMEBOARD_SIZE>, GAMEBOARD_SIZE> Board;
     array<int, 3> ChessCount;
+
     void BoardAddSpot(int x, int y, int chess);
     void BoardRemoveSpot(int x, int y);
 } GAMEINFO;
@@ -47,9 +48,10 @@ using NODE = pair<int, pair<int, int> /**/>;
 class GAMECONTROL
 {
 public:
-    int MinimaxDepth = 3;
+    int SearchDepth = 2;
 
     NODE Minimax(int Depth, bool maximizingPlayer, ofstream &fout);
+    NODE AlphaBeta(int Depth, int a, int b, bool maximizingPlayer, ofstream &fout);
     int EvaluateBoard(ofstream &fout);
     void CountLevel(int Player, int Rival, int *LevelCount, int x, int y, bool *Direction);
     void CountLevelByDirection(int Player, int Rival, int *LevelCount, int x, int y, int Dir);
@@ -68,14 +70,21 @@ int main(int, char **argv)
 
     if (GameInfo.ChessCount[EMPTY] != GAMEBOARD_SIZE * GAMEBOARD_SIZE)
     {
-        NODE spot = GameControl.Minimax(GameControl.MinimaxDepth, true, fout);
+        // if (GameInfo.ChessCount[EMPTY] < 200)
+        //     GameControl.SearchDepth = 2;
+        // else
+        //     GameControl.SearchDepth = 3;
 
-        // NOTE: Remember
-        fout << spot.second.second << " " << spot.second.first << "\n";
+        // NODE spot = GameControl.Minimax(GameControl.SearchDepth, true, fout);
 
-        // GameInfo.Board[spot.second.first][spot.second.second] = GameInfo.Player;
-        // GameControl.PrintBoard(fout);
+        GameControl.SearchDepth = 2;
+        NODE spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        fout << spot.second.second << " " << spot.second.first << '\n';
+        fout.flush();
 
+        GameControl.SearchDepth = 3;
+        spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        fout << spot.second.second << " " << spot.second.first << '\n';
         fout.flush();
     }
     else
@@ -353,14 +362,14 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
     int SearchXEnd = GAMEBOARD_SIZE;
     int SearchYEnd = GAMEBOARD_SIZE;
 
-    if (GameInfo.BoardStartX >= 4)
-        SearchXStart = GameInfo.BoardStartX - 4;
-    if (GameInfo.BoardStartY >= 4)
-        SearchYStart = GameInfo.BoardStartY - 4;
-    if (GameInfo.BoardEndX < GAMEBOARD_SIZE - 5)
-        SearchXEnd = GameInfo.BoardEndX + 5;
-    if (GameInfo.BoardEndY < GAMEBOARD_SIZE - 5)
-        SearchYEnd = GameInfo.BoardEndY + 5;
+    if (GameInfo.BoardStartX >= 2)
+        SearchXStart = GameInfo.BoardStartX - 2;
+    if (GameInfo.BoardStartY >= 2)
+        SearchYStart = GameInfo.BoardStartY - 2;
+    if (GameInfo.BoardEndX < GAMEBOARD_SIZE - 3)
+        SearchXEnd = GameInfo.BoardEndX + 3;
+    if (GameInfo.BoardEndY < GAMEBOARD_SIZE - 3)
+        SearchYEnd = GameInfo.BoardEndY + 3;
 
     if (maximizingPlayer)
     {
@@ -410,6 +419,100 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
                         value.second.first = x;
                         value.second.second = y;
                     }
+
+                    GameInfo.BoardRemoveSpot(x, y);
+                }
+            }
+        }
+
+        return value;
+    }
+}
+
+NODE GAMECONTROL::AlphaBeta(int Depth, int a, int b, bool maximizingPlayer, ofstream &fout)
+{
+    if (Depth == 0 || GameInfo.ChessCount[EMPTY] == 0)
+    {
+        return make_pair(EvaluateBoard(fout), make_pair(7, 7));
+    }
+
+    int SearchXStart = 0;
+    int SearchYStart = 0;
+    int SearchXEnd = GAMEBOARD_SIZE;
+    int SearchYEnd = GAMEBOARD_SIZE;
+
+    if (GameInfo.BoardStartX >= 1)
+        SearchXStart = GameInfo.BoardStartX - 1;
+    if (GameInfo.BoardStartY >= 1)
+        SearchYStart = GameInfo.BoardStartY - 1;
+    if (GameInfo.BoardEndX < GAMEBOARD_SIZE - 2)
+        SearchXEnd = GameInfo.BoardEndX + 2;
+    if (GameInfo.BoardEndY < GAMEBOARD_SIZE - 2)
+        SearchYEnd = GameInfo.BoardEndY + 2;
+
+    if (maximizingPlayer)
+    {
+        NODE EvaluateValue;
+        NODE value(INT_MIN, make_pair(7, 7));
+
+        for (int y = SearchYStart; y < SearchYEnd; y++)
+        {
+            for (int x = SearchXStart; x < SearchXEnd; x++)
+            {
+                if (GameInfo.Board[x][y] == EMPTY)
+                {
+                    GameInfo.BoardAddSpot(x, y, GameInfo.Player);
+
+                    EvaluateValue = AlphaBeta(Depth - 1, a, b, false, fout);
+                    if (EvaluateValue.first > value.first)
+                    {
+                        value.first = EvaluateValue.first;
+                        value.second.first = x;
+                        value.second.second = y;
+                    }
+                    if (value.first >= b)
+                    {
+                        GameInfo.BoardRemoveSpot(x, y);
+                        break;
+                    }
+
+                    a = max(a, value.first);
+
+                    GameInfo.BoardRemoveSpot(x, y);
+                }
+            }
+        }
+
+        return value;
+    }
+    else /* minimizing player */
+    {
+        NODE EvaluateValue;
+        NODE value(INT_MAX, make_pair(7, 7));
+
+        for (int y = SearchYStart; y < SearchYEnd; y++)
+        {
+            for (int x = SearchXStart; x < SearchXEnd; x++)
+            {
+                if (GameInfo.Board[x][y] == EMPTY)
+                {
+                    GameInfo.BoardAddSpot(x, y, GameInfo.Rival);
+
+                    EvaluateValue = AlphaBeta(Depth - 1, a, b, false, fout);
+                    if (EvaluateValue.first < value.first)
+                    {
+                        value.first = EvaluateValue.first;
+                        value.second.first = x;
+                        value.second.second = y;
+                    }
+
+                    if (value.first <= a)
+                    {
+                        GameInfo.BoardRemoveSpot(x, y);
+                        break;
+                    }
+
+                    b = min(b, value.first);
 
                     GameInfo.BoardRemoveSpot(x, y);
                 }
