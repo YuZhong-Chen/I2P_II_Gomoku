@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+// #define SHOW_PROCESS
+
 #define TIMEOUT 10
 
 struct Point
@@ -288,7 +290,11 @@ int main(int argc, char **argv)
     GomokuBoard game;
     std::string data;
     data = game.encode_output();
+
+#ifndef SHOW_PROCESSS
     std::cout << data;
+#endif
+
     log << data;
     while (!game.done)
     {
@@ -313,7 +319,11 @@ int main(int argc, char **argv)
             p.y = y;
         }
         fin.close();
+
+#ifndef SHOW_PROCESSS
         std::cout << "Put: (" << p.x << ',' << p.y << ")\n";
+#endif
+
         // Reset action file
         if (remove(file_action.c_str()) != 0)
             std::cerr << "Error removing file: " << file_action << "\n";
@@ -322,12 +332,20 @@ int main(int argc, char **argv)
         {
             // If action is invalid.
             data = game.encode_output(true);
+
+#ifndef SHOW_PROCESSS
             std::cout << data;
+#endif
+
             log << data;
             break;
         }
         data = game.encode_output();
+
+#ifndef SHOW_PROCESSS
         std::cout << data;
+#endif
+
         log << data;
     }
     log.close();
