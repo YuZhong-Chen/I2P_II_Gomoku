@@ -29,8 +29,16 @@ typedef struct
 {
     int Player;
     int Rival;
+    int BoardStartX = GAMEBOARD_SIZE;
+    int BoardStartY = GAMEBOARD_SIZE;
+    int BoardEndX = 0;
+    int BoardEndY = 0;
+    bool BoardExistChestX[GAMEBOARD_SIZE] = {false};
+    bool BoardExistChestY[GAMEBOARD_SIZE] = {false};
     array<array<int, GAMEBOARD_SIZE>, GAMEBOARD_SIZE> Board;
     array<int, 3> ChessCount;
+    void BoardAddSpot(int x, int y, int chess);
+    void BoardRemoveSpot(int x, int y);
 } GAMEINFO;
 GAMEINFO GameInfo;
 
@@ -39,7 +47,7 @@ using NODE = pair<int, pair<int, int> /**/>;
 class GAMECONTROL
 {
 public:
-    const int MinimaxDepth = 2;
+    int MinimaxDepth = 3;
 
     NODE Minimax(int Depth, bool maximizingPlayer, ofstream &fout);
     int EvaluateBoard(ofstream &fout);
@@ -94,6 +102,22 @@ void GAMECONTROL::ReadBoard(ifstream &fin, ofstream &fout)
         {
             fin >> GameInfo.Board[x][y];
             GameInfo.ChessCount[GameInfo.Board[x][y]] += 1;
+            GameInfo.BoardExistChestX[x] = (GameInfo.BoardExistChestX[x] || GameInfo.Board[x][y] != EMPTY);
+            GameInfo.BoardExistChestY[y] = (GameInfo.BoardExistChestY[y] || GameInfo.Board[x][y] != EMPTY);
+        }
+    }
+
+    for (int i = 0; i < GAMEBOARD_SIZE; i++)
+    {
+        if (GameInfo.BoardExistChestX[i])
+        {
+            GameInfo.BoardStartX = min(GameInfo.BoardStartX, i);
+            GameInfo.BoardEndX = max(GameInfo.BoardEndX, i);
+        }
+        if (GameInfo.BoardExistChestY[i])
+        {
+            GameInfo.BoardStartY = min(GameInfo.BoardStartY, i);
+            GameInfo.BoardEndY = max(GameInfo.BoardEndY, i);
         }
     }
 
@@ -103,11 +127,94 @@ void GAMECONTROL::ReadBoard(ifstream &fin, ofstream &fout)
 #endif
 }
 
+void GAMEINFO::BoardAddSpot(int x, int y, int chess)
+{
+    GameInfo.Board[x][y] = chess;
+    GameInfo.ChessCount[chess] += 1;
+    GameInfo.ChessCount[EMPTY] -= 1;
+    GameInfo.BoardExistChestX[x] = true;
+    GameInfo.BoardExistChestY[y] = true;
+
+    GameInfo.BoardStartX = min(GameInfo.BoardStartX, x);
+    GameInfo.BoardEndX = max(GameInfo.BoardEndX, x);
+    GameInfo.BoardStartY = min(GameInfo.BoardStartY, y);
+    GameInfo.BoardEndY = max(GameInfo.BoardEndY, y);
+}
+
+void GAMEINFO::BoardRemoveSpot(int x, int y)
+{
+    GameInfo.ChessCount[GameInfo.Board[x][y]] -= 1;
+    GameInfo.ChessCount[EMPTY] += 1;
+    GameInfo.Board[x][y] = EMPTY;
+
+    GameInfo.BoardExistChestX[x] = GameInfo.BoardExistChestY[y] = false;
+    for (int i = 0; i < GAMEBOARD_SIZE; i++)
+    {
+        if (GameInfo.Board[x][i] != EMPTY)
+            GameInfo.BoardExistChestX[x] = true;
+        if (GameInfo.Board[i][y] != EMPTY)
+            GameInfo.BoardExistChestY[y] = true;
+    }
+
+    if (!GameInfo.BoardExistChestX[x])
+    {
+        if (x == GameInfo.BoardStartX)
+        {
+            for (int i = GameInfo.BoardStartX + 1; i < GAMEBOARD_SIZE; i++)
+            {
+                if (GameInfo.BoardExistChestX[i])
+                {
+                    GameInfo.BoardStartX = i;
+                    break;
+                }
+            }
+        }
+        else if (x == GameInfo.BoardEndX)
+        {
+            for (int i = GameInfo.BoardEndX - 1; i >= 0; i--)
+            {
+                if (GameInfo.BoardExistChestX[i])
+                {
+                    GameInfo.BoardEndX = i;
+                    break;
+                }
+            }
+        }
+    }
+    if (!GameInfo.BoardExistChestY[y])
+    {
+        if (y == GameInfo.BoardStartY)
+        {
+            for (int i = GameInfo.BoardStartY + 1; i < GAMEBOARD_SIZE; i++)
+            {
+                if (GameInfo.BoardExistChestY[i])
+                {
+                    GameInfo.BoardStartY = i;
+                    break;
+                }
+            }
+        }
+        else if (y == GameInfo.BoardEndY)
+        {
+            for (int i = GameInfo.BoardEndY - 1; i >= 0; i--)
+            {
+                if (GameInfo.BoardExistChestY[i])
+                {
+                    GameInfo.BoardEndY = i;
+                    break;
+                }
+            }
+        }
+    }
+}
+
 void GAMECONTROL::PrintBoard(ofstream &fout)
 {
     fout << "BLACK : " << GameInfo.ChessCount[BLACK] << "\n";
     fout << "WHITE : " << GameInfo.ChessCount[WHITE] << "\n";
     fout << "EMPTY : " << GameInfo.ChessCount[EMPTY] << "\n";
+    fout << "X : " << GameInfo.BoardStartX << " " << GameInfo.BoardEndX << "\n";
+    fout << "Y : " << GameInfo.BoardStartY << " " << GameInfo.BoardEndY << "\n";
     fout << "===============================\n";
     for (int y = 0; y < GAMEBOARD_SIZE; y++)
     {
@@ -192,11 +299,11 @@ int GAMECONTROL::EvaluateBoard(ofstream &fout)
     int RivalLevelRate[6] = {0, 1, 5, 20, 30, 2000};
 
     bool Direction[4];
-    for (int y = 0; y < GAMEBOARD_SIZE; y++)
+    for (int y = GameInfo.BoardStartY; y <= GameInfo.BoardEndY; y++)
     {
         Direction[1] = (y >= 4);
         Direction[3] = (y < GAMEBOARD_SIZE - 4);
-        for (int x = 0; x < GAMEBOARD_SIZE; x++)
+        for (int x = GameInfo.BoardStartX; x <= GameInfo.BoardEndX; x++)
         {
             if (GameInfo.Board[x][y] == EMPTY)
                 continue;
@@ -241,20 +348,32 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
         return make_pair(EvaluateBoard(fout), make_pair(7, 7));
     }
 
+    int SearchXStart = 0;
+    int SearchYStart = 0;
+    int SearchXEnd = GAMEBOARD_SIZE;
+    int SearchYEnd = GAMEBOARD_SIZE;
+
+    if (GameInfo.BoardStartX >= 4)
+        SearchXStart = GameInfo.BoardStartX - 4;
+    if (GameInfo.BoardStartY >= 4)
+        SearchYStart = GameInfo.BoardStartY - 4;
+    if (GameInfo.BoardEndX < GAMEBOARD_SIZE - 5)
+        SearchXEnd = GameInfo.BoardEndX + 5;
+    if (GameInfo.BoardEndY < GAMEBOARD_SIZE - 5)
+        SearchYEnd = GameInfo.BoardEndY + 5;
+
     if (maximizingPlayer)
     {
         NODE EvaluateValue;
         NODE value(INT_MIN, make_pair(7, 7));
 
-        for (int y = 0; y < GAMEBOARD_SIZE; y++)
+        for (int y = SearchYStart; y < SearchYEnd; y++)
         {
-            for (int x = 0; x < GAMEBOARD_SIZE; x++)
+            for (int x = SearchXStart; x < SearchXEnd; x++)
             {
                 if (GameInfo.Board[x][y] == EMPTY)
                 {
-                    GameInfo.Board[x][y] = GameInfo.Player;
-                    GameInfo.ChessCount[EMPTY] -= 1;
-                    GameInfo.ChessCount[GameInfo.Player] += 1;
+                    GameInfo.BoardAddSpot(x, y, GameInfo.Player);
 
                     EvaluateValue = Minimax(Depth - 1, false, fout);
                     if (EvaluateValue.first > value.first)
@@ -264,9 +383,7 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
                         value.second.second = y;
                     }
 
-                    GameInfo.Board[x][y] = EMPTY;
-                    GameInfo.ChessCount[EMPTY] += 1;
-                    GameInfo.ChessCount[GameInfo.Player] -= 1;
+                    GameInfo.BoardRemoveSpot(x, y);
                 }
             }
         }
@@ -278,15 +395,13 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
         NODE EvaluateValue;
         NODE value(INT_MAX, make_pair(7, 7));
 
-        for (int y = 0; y < GAMEBOARD_SIZE; y++)
+        for (int y = SearchYStart; y < SearchYEnd; y++)
         {
-            for (int x = 0; x < GAMEBOARD_SIZE; x++)
+            for (int x = SearchXStart; x < SearchXEnd; x++)
             {
                 if (GameInfo.Board[x][y] == EMPTY)
                 {
-                    GameInfo.Board[x][y] = GameInfo.Rival;
-                    GameInfo.ChessCount[EMPTY] -= 1;
-                    GameInfo.ChessCount[GameInfo.Rival] += 1;
+                    GameInfo.BoardAddSpot(x, y, GameInfo.Rival);
 
                     EvaluateValue = Minimax(Depth - 1, false, fout);
                     if (EvaluateValue.first < value.first)
@@ -296,9 +411,7 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
                         value.second.second = y;
                     }
 
-                    GameInfo.Board[x][y] = EMPTY;
-                    GameInfo.ChessCount[EMPTY] += 1;
-                    GameInfo.ChessCount[GameInfo.Rival] -= 1;
+                    GameInfo.BoardRemoveSpot(x, y);
                 }
             }
         }
