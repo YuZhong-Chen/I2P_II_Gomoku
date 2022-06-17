@@ -37,6 +37,7 @@ class GAMECONTROL
 {
 public:
     int EvaluateBoard(std::ofstream &fout);
+    void CountLevel(int Player, int Rival, int *LevelCount, int x, int y, bool *Direction);
     void ReadBoard(std::ifstream &fin, std::ofstream &fout);
     void WriteValidSpot(std::ofstream &fout);
     void PrintBoard(std::ofstream &fout);
@@ -103,65 +104,198 @@ void GAMECONTROL::PrintBoard(std::ofstream &fout)
     fout << "===============================\n\n";
 }
 
+void GAMECONTROL::CountLevel(int Player, int Rival, int *PlayerLevelCount, int x, int y, bool *Direction)
+{
+    int LevelCount;
+
+    // NOTE : type 1
+    if (Direction[0])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x + i][y] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x + i][y] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+    // NOTE : type 2
+    if (Direction[0] && Direction[1])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x + i][y - i] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x + i][y - i] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+    // NOTE : type 3
+    if (Direction[1])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x][y - i] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x][y - i] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+    // NOTE : type 4
+    if (Direction[1] && Direction[2])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x - i][y - i] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x - i][y - i] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+    // NOTE : type 5
+    if (Direction[2])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x - i][y] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x - i][y] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+    // NOTE : type 6
+    if (Direction[2] && Direction[3])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x - i][y + i] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x - i][y + i] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+    // NOTE : type 7
+    if (Direction[3])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x][y + i] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x][y + i] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+    // NOTE : type 8
+    if (Direction[0] && Direction[3])
+    {
+        LevelCount = 1;
+        for (int i = 1; i <= 4; i++)
+        {
+            if (GameInfo.Board[x + i][y + i] == Player)
+            {
+                LevelCount += 1;
+            }
+            else if (GameInfo.Board[x + i][y + i] == Rival)
+            {
+                LevelCount = -1;
+                break;
+            }
+        }
+        if (LevelCount != -1)
+            PlayerLevelCount[LevelCount] += 1;
+    }
+}
+
 int GAMECONTROL::EvaluateBoard(std::ofstream &fout)
 {
     int PlayerValue = 0;
     int PlayerLevelCount[6] = {0};
-    int PlayerLevelRate[6] = {0, 1, 1, 2, 4, 10};
+    int PlayerLevelRate[6] = {0, 0, 1, 2, 4, 10};
 
     int RivalValue = 0;
     int RivalLevelCount[6] = {0};
-    int RivalLevelRate[6] = {0, 1, 1, 2, 4, 10};
+    int RivalLevelRate[6] = {0, 0, 1, 2, 4, 10};
 
-    int LevelCount;
+    bool Direction[4];
     for (int y = 0; y < GAMEBOARD_SIZE; y++)
     {
+        Direction[1] = (y >= 4);
+        Direction[3] = (y < GAMEBOARD_SIZE - 4);
         for (int x = 0; x < GAMEBOARD_SIZE; x++)
         {
             if (GameInfo.Board[x][y] == EMPTY)
                 continue;
 
-            if (GameInfo.Board[x][y] == GameInfo.Player)
-            {
-                if (x + 4 < GAMEBOARD_SIZE)
-                {
-                    // =====================================================
-                    // type one
-                    LevelCount = 1;
-                    for (int i = 1; i <= 4; i++)
-                    {
-                        if (GameInfo.Board[x + i][y] == GameInfo.Player)
-                        {
-                            LevelCount += 1;
-                        }
-                        else if (GameInfo.Board[x + i][y] == GameInfo.Rival)
-                        {
-                            LevelCount = -1;
-                            break;
-                        }
-                    }
-                    if (LevelCount != -1)
-                        PlayerLevelCount[LevelCount] += 1;
-                    // =====================================================
+            Direction[0] = (x < GAMEBOARD_SIZE - 4);
+            Direction[2] = (x >= 4);
 
-                    if (y + 4 < GAMEBOARD_SIZE)
-                    {
-                    }
-                }
-                else if (y + 4 > GAMEBOARD_SIZE)
-                {
-                }
-            }
+            if (GameInfo.Board[x][y] == GameInfo.Player)
+                CountLevel(GameInfo.Player, GameInfo.Rival, PlayerLevelCount, x, y, Direction);
             else /* GameInfo.Rival **/
-            {
-            }
+                CountLevel(GameInfo.Rival, GameInfo.Player, RivalLevelCount, x, y, Direction);
         }
     }
 
     for (int i = 1; i <= 5; i++)
     {
-        PlayerValue = PlayerLevelCount[i] * PlayerLevelRate[i];
-        RivalValue = RivalLevelCount[i] * RivalLevelRate[i];
+        PlayerValue += PlayerLevelCount[i] * PlayerLevelRate[i];
+        RivalValue += RivalLevelCount[i] * RivalLevelRate[i];
     }
 
 #ifdef DEBUG
@@ -175,7 +309,7 @@ int GAMECONTROL::EvaluateBoard(std::ofstream &fout)
     {
         fout << "Rival Level " << i << " : " << RivalLevelCount[i] << "\n";
     }
-
+    fout << "\nValue : " << PlayerValue - RivalValue << "\n";
 #endif
 
     return PlayerValue - RivalValue;

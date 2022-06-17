@@ -1,7 +1,7 @@
 Read Board
-BLACK : 7
-WHITE : 0
-EMPTY : 218
+BLACK : 1
+WHITE : 4
+EMPTY : 220
 ===============================
 |. . . . . . . . . . . . . . .|
 |. . . . . . . . . . . . . . .|
@@ -10,25 +10,27 @@ EMPTY : 218
 |. . . . . . . . . . . . . . .|
 |. . . . . . . . . . . . . . .|
 |. . . . . . . . . . . . . . .|
-|. . . . . . X X X . . . . . .|
-|. . . . . . . . . . . . . . .|
-|. . . . . . . . . . . . . . .|
-|. . . . . . . . . . X X . . .|
-|. . . . . . . . . . . . X X .|
 |. . . . . . . . . . . . . . .|
 |. . . . . . . . . . . . . . .|
 |. . . . . . . . . . . . . . .|
+|. . . . . . . . . . O . . . .|
+|. . . . . . . . . . . O . . .|
+|. . . . . . . . . . . . O . .|
+|. . . . . . . . . . . . . O .|
+|. . . . . . . . . . . . . . X|
 ===============================
 
 Evaluate Board
-Player Level 1 : 1
-Player Level 2 : 2
-Player Level 3 : 1
+Player Level 1 : 2
+Player Level 2 : 0
+Player Level 3 : 0
 Player Level 4 : 0
 Player Level 5 : 0
 
-Rival Level 1 : 0
-Rival Level 2 : 0
-Rival Level 3 : 0
-Rival Level 4 : 0
+Rival Level 1 : 13
+Rival Level 2 : 1
+Rival Level 3 : 1
+Rival Level 4 : 1
 Rival Level 5 : 0
+
+Value : -7
