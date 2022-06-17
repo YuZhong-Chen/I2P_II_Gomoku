@@ -13,9 +13,10 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#define GAMEBOARD_SIZE 15
+using namespace std;
 
-#define DEBUG
+#define GAMEBOARD_SIZE 15
+// #define DEBUG
 
 enum SPOT_STATE
 {
@@ -28,35 +29,52 @@ typedef struct
 {
     int Player;
     int Rival;
-    std::array<std::array<int, GAMEBOARD_SIZE>, GAMEBOARD_SIZE> Board;
-    std::array<int, 3> ChessCount;
+    array<array<int, GAMEBOARD_SIZE>, GAMEBOARD_SIZE> Board;
+    array<int, 3> ChessCount;
 } GAMEINFO;
 GAMEINFO GameInfo;
+
+using NODE = pair<int, pair<int, int> /**/>;
 
 class GAMECONTROL
 {
 public:
-    int EvaluateBoard(std::ofstream &fout);
+    const int MinimaxDepth = 2;
+
+    NODE Minimax(int Depth, bool maximizingPlayer, ofstream &fout);
+    int EvaluateBoard(ofstream &fout);
     void CountLevel(int Player, int Rival, int *LevelCount, int x, int y, bool *Direction);
-    void ReadBoard(std::ifstream &fin, std::ofstream &fout);
-    void WriteValidSpot(std::ofstream &fout);
-    void PrintBoard(std::ofstream &fout);
+    void ReadBoard(ifstream &fin, ofstream &fout);
+    void PrintBoard(ofstream &fout);
 } GameControl;
 
 int main(int, char **argv)
 {
-    std::ifstream fin(argv[1]);
-    std::ofstream fout(argv[2]);
+    ifstream fin(argv[1]);
+    ofstream fout(argv[2]);
 
     GameControl.ReadBoard(fin, fout);
-    GameControl.WriteValidSpot(fout);
+
+    if (GameInfo.ChessCount[EMPTY] != GAMEBOARD_SIZE * GAMEBOARD_SIZE)
+    {
+        NODE spot = GameControl.Minimax(GameControl.MinimaxDepth, true, fout);
+
+        // NOTE: Remember
+        fout << spot.second.second << " " << spot.second.first << "\n";
+        fout.flush();
+    }
+    else
+    {
+        fout << "7 7\n";
+        fout.flush();
+    }
 
     fin.close();
     fout.close();
     return 0;
 }
 
-void GAMECONTROL::ReadBoard(std::ifstream &fin, std::ofstream &fout)
+void GAMECONTROL::ReadBoard(ifstream &fin, ofstream &fout)
 {
     GameInfo.ChessCount[EMPTY] = GameInfo.ChessCount[BLACK] = GameInfo.ChessCount[WHITE] = 0;
 
@@ -74,15 +92,15 @@ void GAMECONTROL::ReadBoard(std::ifstream &fin, std::ofstream &fout)
 
 #ifdef DEBUG
     fout << "Read Board\n";
-    fout << "BLACK : " << GameInfo.ChessCount[BLACK] << "\n";
-    fout << "WHITE : " << GameInfo.ChessCount[WHITE] << "\n";
-    fout << "EMPTY : " << GameInfo.ChessCount[EMPTY] << "\n";
     PrintBoard(fout);
 #endif
 }
 
-void GAMECONTROL::PrintBoard(std::ofstream &fout)
+void GAMECONTROL::PrintBoard(ofstream &fout)
 {
+    fout << "BLACK : " << GameInfo.ChessCount[BLACK] << "\n";
+    fout << "WHITE : " << GameInfo.ChessCount[WHITE] << "\n";
+    fout << "EMPTY : " << GameInfo.ChessCount[EMPTY] << "\n";
     fout << "===============================\n";
     for (int y = 0; y < GAMEBOARD_SIZE; y++)
     {
@@ -90,9 +108,9 @@ void GAMECONTROL::PrintBoard(std::ofstream &fout)
         for (int x = 0; x < GAMEBOARD_SIZE; x++)
         {
             if (GameInfo.Board[x][y] == BLACK)
-                fout << "X";
-            else if (GameInfo.Board[x][y] == WHITE)
                 fout << "O";
+            else if (GameInfo.Board[x][y] == WHITE)
+                fout << "X";
             else
                 fout << ".";
 
@@ -262,15 +280,15 @@ void GAMECONTROL::CountLevel(int Player, int Rival, int *PlayerLevelCount, int x
     }
 }
 
-int GAMECONTROL::EvaluateBoard(std::ofstream &fout)
+int GAMECONTROL::EvaluateBoard(ofstream &fout)
 {
     int PlayerValue = 0;
     int PlayerLevelCount[6] = {0};
-    int PlayerLevelRate[6] = {0, 0, 1, 2, 4, 10};
+    int PlayerLevelRate[6] = {0, 0, 2, 5, 10, 100000};
 
     int RivalValue = 0;
     int RivalLevelCount[6] = {0};
-    int RivalLevelRate[6] = {0, 0, 1, 2, 4, 10};
+    int RivalLevelRate[6] = {0, 0, 0, 20, 30, 2000};
 
     bool Direction[4];
     for (int y = 0; y < GAMEBOARD_SIZE; y++)
@@ -315,24 +333,75 @@ int GAMECONTROL::EvaluateBoard(std::ofstream &fout)
     return PlayerValue - RivalValue;
 }
 
-void GAMECONTROL::WriteValidSpot(std::ofstream &fout)
+NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
 {
-    EvaluateBoard(fout);
+    if (Depth == 0 || GameInfo.ChessCount[EMPTY] == 0)
+    {
+        return make_pair(EvaluateBoard(fout), make_pair(0, 0));
+    }
 
-    // srand(time(NULL));
-    // int x, y;
-    // Keep updating the output until getting killed.
-    // while (true)
-    // {
-    //     // Choose a random spot.
-    //     x = (rand() % SIZE);
-    //     y = (rand() % SIZE);
-    //     if (board[x][y] == EMPTY)
-    //     {
-    //         fout << x << " " << y << std::endl;
-    //         // Remember to flush the output to ensure the last action is written to file.
-    //         fout.flush();
-    //         break;
-    //     }
-    // }
+    if (maximizingPlayer)
+    {
+        NODE EvaluateValue;
+        NODE value(INT_MIN, make_pair(0, 0));
+
+        for (int y = 0; y < GAMEBOARD_SIZE; y++)
+        {
+            for (int x = 0; x < GAMEBOARD_SIZE; x++)
+            {
+                if (GameInfo.Board[x][y] == EMPTY)
+                {
+                    GameInfo.Board[x][y] = GameInfo.Player;
+                    GameInfo.ChessCount[EMPTY] -= 1;
+                    GameInfo.ChessCount[GameInfo.Player] += 1;
+
+                    EvaluateValue = Minimax(Depth - 1, false, fout);
+                    if (EvaluateValue.first > value.first)
+                    {
+                        value.first = EvaluateValue.first;
+                        value.second.first = x;
+                        value.second.second = y;
+                    }
+
+                    GameInfo.Board[x][y] = EMPTY;
+                    GameInfo.ChessCount[EMPTY] += 1;
+                    GameInfo.ChessCount[GameInfo.Player] -= 1;
+                }
+            }
+        }
+
+        return value;
+    }
+    else /* minimizing player */
+    {
+        NODE EvaluateValue;
+        NODE value(INT_MAX, make_pair(0, 0));
+
+        for (int y = 0; y < GAMEBOARD_SIZE; y++)
+        {
+            for (int x = 0; x < GAMEBOARD_SIZE; x++)
+            {
+                if (GameInfo.Board[x][y] == EMPTY)
+                {
+                    GameInfo.Board[x][y] = GameInfo.Rival;
+                    GameInfo.ChessCount[EMPTY] -= 1;
+                    GameInfo.ChessCount[GameInfo.Rival] += 1;
+
+                    EvaluateValue = Minimax(Depth - 1, false, fout);
+                    if (EvaluateValue.first < value.first)
+                    {
+                        value.first = EvaluateValue.first;
+                        value.second.first = x;
+                        value.second.second = y;
+                    }
+
+                    GameInfo.Board[x][y] = EMPTY;
+                    GameInfo.ChessCount[EMPTY] += 1;
+                    GameInfo.ChessCount[GameInfo.Rival] -= 1;
+                }
+            }
+        }
+
+        return value;
+    }
 }
