@@ -1,3 +1,3 @@
 make clean
 make
-./main ./player ./baselines/baseline2
+./main ./player ./baselines/baseline1

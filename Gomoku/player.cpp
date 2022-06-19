@@ -74,7 +74,7 @@ public:
     int EvaluateBoard(ofstream &fout);
     void UpdateChessLine(POINT pt, short dir);
     void EvaluatePoint(POINT pt, ofstream &fout);
-    void EvaluateChessLine(short Player, short Rival, ofstream &fout);
+    POINT EvaluateChessLine(short Player, short Rival, ofstream &fout);
 
     void ReadBoard(ifstream &fin, ofstream &fout);
     void PrintBoard(ofstream &fout);
@@ -96,58 +96,62 @@ int main(int, char **argv)
 
     GameControl.ReadBoard(fin, fout);
 
-    GameControl.UpdateChessLine(make_pair(4, 14), 0);
-    GameControl.EvaluateChessLine(GameInfo.Board[4][14], 3 - GameInfo.Board[4][14], fout);
+    // GameControl.UpdateChessLine(make_pair(4, 14), 0);
+    // GameControl.EvaluateChessLine(GameInfo.Board[4][14], 3 - GameInfo.Board[4][14], fout);
 
-    for (int i = 0; i < 9; i++)
-    {
-        if (GameControl.ChessLine[i] == BLACK)
-            fout << "O";
-        else if (GameControl.ChessLine[i] == WHITE)
-            fout << "X";
-        else
-            fout << ".";
-    }
-    fout << "\n\n";
-
-    for (int i = 0; i < 7; i++)
-    {
-        fout << "Player Type " << i << " : " << GameControl.TypeCount[GameInfo.Player][i] << "\n";
-    }
-    fout << "\n";
-    for (int i = 0; i < 7; i++)
-    {
-        fout << "Rival Type " << i << " : " << GameControl.TypeCount[GameInfo.Rival][i] << "\n";
-    }
-
-    // GameControl.EvaluatePoint(make_pair(6, 7), fout);
-
-    // GameControl.EvaluateBoard(fout);
-
-    // if (GameInfo.EmptyChessCount != GAMEBOARD_SIZE * GAMEBOARD_SIZE)
+    // for (int i = 0; i < 9; i++)
     // {
-    //     // if (GameInfo.ChessCount[EMPTY] < 200)
-    //     //     GameControl.SearchDepth = 2;
-    //     // else
-    //     //     GameControl.SearchDepth = 3;
-
-    //     // NODE spot = GameControl.Minimax(GameControl.SearchDepth, true, fout);
-
-    //     // GameControl.SearchDepth = 2;
-    //     // NODE spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
-    //     // fout << spot.second.second << " " << spot.second.first << '\n';
-    //     // fout.flush();
-
-    //     // GameControl.SearchDepth = 3;
-    //     // spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
-    //     // fout << spot.second.second << " " << spot.second.first << '\n';
-    //     // fout.flush();
+    //     if (GameControl.ChessLine[i] == BLACK)
+    //         fout << "O";
+    //     else if (GameControl.ChessLine[i] == WHITE)
+    //         fout << "X";
+    //     else
+    //         fout << ".";
     // }
-    // else
+    // fout << "\n\n";
+
+    // GameControl.EvaluatePoint(make_pair(6, 6), fout);
+
+    // GameControl.PrintBoard(fout);
+    // fout << GameControl.EvaluateBoard(fout) << "\n";
+    // for (int i = 0; i < 7; i++)
     // {
-    //     fout << "6 6\n";
-    //     fout.flush();
+    //     fout << "Player Type " << i + 1 << " : " << GameControl.TypeCount[GameInfo.Player][i] << "\n";
     // }
+    // fout << "\n";
+    // for (int i = 0; i < 7; i++)
+    // {
+    //     fout << "Rival Type " << i + 1 << " : " << GameControl.TypeCount[GameInfo.Rival][i] << "\n";
+    // }
+    // fout << "\n";
+
+    if (GameInfo.EmptyChessCount != GAMEBOARD_SIZE * GAMEBOARD_SIZE)
+    {
+        // if (GameInfo.ChessCount[EMPTY] < 200)
+        //     GameControl.SearchDepth = 2;
+        // else
+        //     GameControl.SearchDepth = 3;
+
+        // NODE spot = GameControl.Minimax(GameControl.SearchDepth, true, fout);
+
+        GameControl.SearchDepth = 2;
+        NODE spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        fout << spot.second.second << ' ' << spot.second.first << '\n';
+        fout.flush();
+
+        GameControl.SearchDepth = 3;
+        NODE Spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        fout << Spot.second.second << ' ' << Spot.second.first << '\n';
+        fout.flush();
+    }
+    else
+    {
+        srand(time(NULL));
+        int x = rand() % GAMEBOARD_SIZE;
+        int y = rand() % GAMEBOARD_SIZE;
+        fout << x << ' ' << y << "\n";
+        fout.flush();
+    }
 
     fin.close();
     fout.close();
@@ -240,12 +244,21 @@ void GAMECONTROL::PrintBoard(ofstream &fout)
 
 void GAMECONTROL::EvaluatePoint(POINT pt, ofstream &fout)
 {
+    POINT CheckRange;
     for (int dir = 0; dir < 4; dir++)
     {
         if (!GameInfo.BoardState[pt.first][pt.second][dir])
         {
             UpdateChessLine(pt, dir);
-            EvaluateChessLine(GameInfo.Board[pt.first][pt.second], 3 - GameInfo.Board[pt.first][pt.second], fout);
+            CheckRange = EvaluateChessLine(GameInfo.Board[pt.first][pt.second], 3 - GameInfo.Board[pt.first][pt.second], fout);
+            for (int i = 4 - CheckRange.first; i >= 0; i--)
+            {
+                GameInfo.BoardState[pt.first + i * DirectionReverse[dir][0]][pt.second + i * DirectionReverse[dir][1]][dir] = true;
+            }
+            for (int i = CheckRange.second - 4; i > 0; i--)
+            {
+                GameInfo.BoardState[pt.first + i * Direction[dir][0]][pt.second + i * Direction[dir][1]][dir] = true;
+            }
         }
     }
 }
@@ -262,7 +275,6 @@ void GAMECONTROL::UpdateChessLine(POINT pt, short dir)
 
         if (x >= 0 && x < GAMEBOARD_SIZE && y >= 0 && y < GAMEBOARD_SIZE)
         {
-            GameInfo.BoardState[x][y][dir] = true;
             ChessLine[i] = GameInfo.Board[x][y];
         }
         else
@@ -271,7 +283,8 @@ void GAMECONTROL::UpdateChessLine(POINT pt, short dir)
         }
     }
 }
-void GAMECONTROL::EvaluateChessLine(short Player, short Rival, ofstream &fout)
+
+POINT GAMECONTROL::EvaluateChessLine(short Player, short Rival, ofstream &fout)
 {
     short L_continuous = 4;
     short R_continuous = 4;
@@ -286,33 +299,166 @@ void GAMECONTROL::EvaluateChessLine(short Player, short Rival, ofstream &fout)
 
     short total_continuous = R_continuous - L_continuous + 1;
 
-    if (total_continuous >= 5)
+    short L_end = L_continuous;
+    short R_end = R_continuous;
+
+    for (; L_end >= 0; L_end--)
+        if (ChessLine[L_end - 1] == Rival)
+            break;
+
+    for (; R_end <= 8; R_end++)
+        if (ChessLine[R_end + 1] == Rival)
+            break;
+
+    short total_range = R_end - L_end + 1;
+    POINT return_range = make_pair(L_continuous, R_continuous);
+
+    if (total_range < 5)
+        return return_range;
+
+    if (total_continuous >= 5) // OOOOO
     {
         TypeCount[Player][FiveInRow] += 1;
+        return return_range;
     }
-    else if (total_continuous == 4)
+
+    bool L_open = (ChessLine[L_continuous - 1] != Rival);
+    bool R_open = (ChessLine[R_continuous + 1] != Rival);
+    if (total_continuous == 4)
     {
+        if (L_open && R_open) // .OOOO.
+            TypeCount[Player][LiveFour] += 1;
+        else if (L_open || R_open) // XOOOO.
+            TypeCount[Player][DeadFour] += 1;
     }
     else if (total_continuous == 3)
     {
+        bool isFour = false;
+        if (L_open && ChessLine[L_continuous - 2] == Player) // O.OOO
+        {
+            return_range.first -= 2;
+            TypeCount[Player][DeadFour] += 1;
+            isFour = true;
+        }
+        if (R_open && ChessLine[R_continuous + 2] == Player) // OOO.O
+        {
+            return_range.second += 2;
+            TypeCount[Player][DeadFour] += 1;
+            isFour = true;
+        }
+
+        if (!isFour)
+        {
+            if (L_open && R_open)
+            {
+                if (total_range == 5) // X.OOO.X
+                {
+                    TypeCount[Player][DeadThree] += 1;
+                }
+                else // ..OOO..
+                {
+                    TypeCount[Player][LiveThree] += 1;
+                }
+            }
+            else if (L_open || R_open) // XOOO.
+            {
+                TypeCount[Player][DeadThree] += 1;
+            }
+        }
     }
     else if (total_continuous == 2)
     {
+        bool isThree = false;
+        if (L_open && ChessLine[L_continuous - 2] == Player)
+        {
+            return_range.first -= 2;
+            if (ChessLine[L_continuous - 3] == EMPTY) // O.OO
+            {
+                if (ChessLine[R_continuous + 1] == EMPTY) // .O.OO.
+                {
+                    TypeCount[Player][LiveThree] += 1;
+                }
+                else // .O.OOX
+                {
+                    TypeCount[Player][DeadThree] += 1;
+                }
+
+                isThree = true;
+            }
+            else if (ChessLine[L_continuous - 3] == Rival && ChessLine[R_continuous + 1] == EMPTY) // XO.OO.
+            {
+                TypeCount[Player][DeadThree] += 1;
+                isThree = true;
+            }
+        }
+        if (R_open && ChessLine[R_continuous + 2] == Player) // OO.O
+        {
+            return_range.second += 2;
+            if (ChessLine[R_continuous + 3] == EMPTY)
+            {
+                if (ChessLine[L_continuous - 1] == EMPTY) // .OO.O.
+                {
+                    TypeCount[Player][LiveThree] += 1;
+                }
+                else // XOO.O.
+                {
+                    TypeCount[Player][DeadThree] += 1;
+                }
+
+                isThree = true;
+            }
+            else if (ChessLine[R_continuous + 3] == Rival && ChessLine[L_continuous - 1] == EMPTY) // .OO.OX
+            {
+                TypeCount[Player][DeadThree] += 1;
+                isThree = true;
+            }
+        }
+
+        if (!isThree)
+        {
+            if (L_open && R_open) // .OO.
+            {
+                TypeCount[Player][LiveTwo] += 1;
+            }
+            else if (L_open || R_open) // XOO.
+            {
+                TypeCount[Player][DeadTwo] += 1;
+            }
+        }
     }
     else if (total_continuous == 1)
     {
+        bool isTwo = false;
+        // .O.OX
+        if (ChessLine[L_continuous - 1] == EMPTY && ChessLine[L_continuous - 2] == Player && ChessLine[L_continuous - 3] == EMPTY && ChessLine[R_continuous + 1] == Rival)
+        {
+            TypeCount[Player][DeadTwo] += 1;
+            isTwo = true;
+        }
+
+        if (ChessLine[R_continuous + 1] == EMPTY && ChessLine[R_continuous + 2] == Player && ChessLine[R_continuous + 3] == EMPTY)
+        {
+            if (!isTwo) // XO.O.
+            {
+                TypeCount[Player][DeadTwo] += 1;
+            }
+            else // .O.O.
+            {
+                TypeCount[Player][LiveTwo] += 1;
+            }
+        }
+        else if (ChessLine[R_continuous + 1] == EMPTY && ChessLine[R_continuous + 2] == EMPTY && ChessLine[R_continuous + 3] == Player && ChessLine[R_continuous + 4] == EMPTY)
+        {
+            // .O..O.
+            TypeCount[Player][LiveTwo] += 1;
+        }
     }
+
+    return return_range;
 }
 
 int GAMECONTROL::EvaluateBoard(ofstream &fout)
 {
-    // TODO : modify here
-    int PlayerValue = 0;
-    int PlayerTypeRate[7] = {0, 0, 0, 0, 0, 0, 0};
-
-    int RivalValue = 0;
-    int RivalTypeRate[7] = {0, 0, 0, 0, 0, 0, 0};
-
     for (int i = 0; i < 7; i++)
         GameControl.TypeCount[1][i] = GameControl.TypeCount[2][i] = 0;
 
@@ -332,11 +478,25 @@ int GAMECONTROL::EvaluateBoard(ofstream &fout)
         }
     }
 
-    // TODO : Add value
-    for (int i = 0; i < 7; i++)
+    int Value[3];
+    float Rate[3];
+    Rate[GameInfo.Player] = 1.0;
+    Rate[GameInfo.Rival] = 2;
+
+    for (int i = 1; i <= 2; i++)
     {
-        PlayerValue += GameControl.TypeCount[GameInfo.Player][i] * PlayerTypeRate[i];
-        RivalValue += GameControl.TypeCount[GameInfo.Rival][i] * RivalTypeRate[i];
+        if (TypeCount[i][FiveInRow] >= 1)
+            Value[i] = 10000000 * Rate[i];
+        else if (TypeCount[i][LiveFour] >= 2)
+            Value[i] = 75000 * Rate[i];
+        else if (TypeCount[i][LiveFour] == 1)
+            Value[i] = 60000 * Rate[i];
+        else if (TypeCount[i][DeadFour] + TypeCount[i][LiveThree] >= 2)
+            Value[i] = 50000 * Rate[i];
+        else if (TypeCount[i][DeadFour] + TypeCount[i][LiveThree] == 1)
+            Value[i] = 10000 * Rate[i];
+        else
+            Value[i] = 1000 * TypeCount[i][LiveTwo] * Rate[i] + 500 * TypeCount[i][DeadThree] * Rate[i] + 300 * TypeCount[i][DeadTwo] * Rate[i];
     }
 
 #ifdef DEBUG
@@ -350,10 +510,10 @@ int GAMECONTROL::EvaluateBoard(ofstream &fout)
     {
         fout << "Rival Type " << i << " : " << GameControl.TypeCount[GameInfo.Rival][i] << "\n";
     }
-    fout << "\nValue : " << PlayerValue - RivalValue << "\n";
+    fout << "\nValue : " << Value[GameInfo.Player] - Value[GameInfo.Rival] << "\n";
 #endif
 
-    return PlayerValue - RivalValue;
+    return Value[GameInfo.Player] - Value[GameInfo.Rival];
 }
 
 NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
@@ -520,7 +680,7 @@ NODE GAMECONTROL::AlphaBeta(int Depth, int a, int b, bool maximizingPlayer, ofst
                     POINT tempEnd = GameInfo.BoardEnd;
                     GameInfo.BoardAddSpot(make_pair(x, y), GameInfo.Rival);
 
-                    EvaluateValue = AlphaBeta(Depth - 1, a, b, false, fout);
+                    EvaluateValue = AlphaBeta(Depth - 1, a, b, true, fout);
                     if (EvaluateValue.first < value.first)
                     {
                         value.first = EvaluateValue.first;
