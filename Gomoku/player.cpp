@@ -55,6 +55,7 @@ typedef struct
 
     void BoardAddSpot(POINT pt, short chess);
     void BoardRemoveSpot(POINT pt);
+    bool isGameOver();
 } GAMEINFO;
 GAMEINFO GameInfo;
 
@@ -134,15 +135,36 @@ int main(int, char **argv)
 
         // NODE spot = GameControl.Minimax(GameControl.SearchDepth, true, fout);
 
+        // GameControl.SearchDepth = 1;
+        // // NODE spot5 = GameControl.Minimax(GameControl.SearchDepth, true, fout);
+        // // fout << spot5.second.second << ' ' << spot5.second.first << '\n';
+        // NODE spot6 = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        // fout << spot6.second.second << ' ' << spot6.second.first << '\n';
+        // fout.flush();
+
         GameControl.SearchDepth = 2;
-        NODE spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
-        fout << spot.second.second << ' ' << spot.second.first << '\n';
+        // NODE spot1 = GameControl.Minimax(GameControl.SearchDepth, true, fout);
+        // fout << spot1.second.second << ' ' << spot1.second.first << '\n';
+        NODE spot2 = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        fout << spot2.second.second << ' ' << spot2.second.first << '\n';
         fout.flush();
 
-        GameControl.SearchDepth = 3;
-        NODE Spot = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
-        fout << Spot.second.second << ' ' << Spot.second.first << '\n';
-        fout.flush();
+        // GameControl.SearchDepth = 3;
+        // // NODE spot3 = GameControl.Minimax(GameControl.SearchDepth, true, fout);
+        // // fout << spot3.second.second << ' ' << spot3.second.first << '\n';
+        // NODE spot4 = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        // fout << spot4.second.second << ' ' << spot4.second.first << '\n';
+        // fout.flush();
+
+        // GameControl.SearchDepth = 4;
+        // NODE spot7 = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        // fout << spot7.second.second << ' ' << spot7.second.first << '\n';
+        // fout.flush();
+
+        // GameControl.SearchDepth = 5;
+        // NODE spot8 = GameControl.AlphaBeta(GameControl.SearchDepth, INT_MIN, INT_MAX, true, fout);
+        // fout << spot8.second.second << ' ' << spot8.second.first << '\n';
+        // fout.flush();
     }
     else
     {
@@ -265,22 +287,22 @@ void GAMECONTROL::EvaluatePoint(POINT pt, ofstream &fout)
 
 void GAMECONTROL::UpdateChessLine(POINT pt, short dir)
 {
-    short temp = 3 - GameInfo.Board[pt.first][pt.second];
-    int x = pt.first + 5 * DirectionReverse[dir][0];
-    int y = pt.second + 5 * DirectionReverse[dir][1];
+    short rival = 3 - GameInfo.Board[pt.first][pt.second];
+    int x = pt.first + 4 * DirectionReverse[dir][0];
+    int y = pt.second + 4 * DirectionReverse[dir][1];
     for (int i = 0; i < 9; i++)
     {
-        x += Direction[dir][0];
-        y += Direction[dir][1];
-
         if (x >= 0 && x < GAMEBOARD_SIZE && y >= 0 && y < GAMEBOARD_SIZE)
         {
             ChessLine[i] = GameInfo.Board[x][y];
         }
         else
         {
-            ChessLine[i] = temp;
+            ChessLine[i] = rival;
         }
+
+        x += Direction[dir][0];
+        y += Direction[dir][1];
     }
 }
 
@@ -468,35 +490,31 @@ int GAMECONTROL::EvaluateBoard(ofstream &fout)
                 GameInfo.BoardState[x][y][0] = GameInfo.BoardState[x][y][1] = GameInfo.BoardState[x][y][2] = GameInfo.BoardState[x][y][3] = false;
 
     for (int y = GameInfo.BoardStart.second; y <= GameInfo.BoardEnd.second; y++)
-    {
         for (int x = GameInfo.BoardStart.first; x <= GameInfo.BoardEnd.first; x++)
-        {
-            if (GameInfo.Board[x][y] == EMPTY)
-                continue;
-
-            EvaluatePoint(make_pair(x, y), fout);
-        }
-    }
+            if (GameInfo.Board[x][y] != EMPTY)
+                EvaluatePoint(make_pair(x, y), fout);
 
     int Value[3];
     float Rate[3];
     Rate[GameInfo.Player] = 1.0;
-    Rate[GameInfo.Rival] = 2;
+    Rate[GameInfo.Rival] = 1.2;
 
     for (int i = 1; i <= 2; i++)
     {
         if (TypeCount[i][FiveInRow] >= 1)
-            Value[i] = 10000000 * Rate[i];
+            Value[i] = 1000000 * Rate[i];
         else if (TypeCount[i][LiveFour] >= 2)
-            Value[i] = 75000 * Rate[i];
+            Value[i] = 8000 * Rate[i];
         else if (TypeCount[i][LiveFour] == 1)
-            Value[i] = 60000 * Rate[i];
+            Value[i] = 6000 * Rate[i];
         else if (TypeCount[i][DeadFour] + TypeCount[i][LiveThree] >= 2)
-            Value[i] = 50000 * Rate[i];
-        else if (TypeCount[i][DeadFour] + TypeCount[i][LiveThree] == 1)
-            Value[i] = 10000 * Rate[i];
+            Value[i] = 3500 * Rate[i];
+        else if (TypeCount[i][DeadFour] == 1)
+            Value[i] = 1500 * Rate[i];
+        else if (TypeCount[i][LiveThree] == 1)
+            Value[i] = 1000 * Rate[i];
         else
-            Value[i] = 1000 * TypeCount[i][LiveTwo] * Rate[i] + 500 * TypeCount[i][DeadThree] * Rate[i] + 300 * TypeCount[i][DeadTwo] * Rate[i];
+            Value[i] = 100 * TypeCount[i][LiveTwo] * Rate[i] + 50 * TypeCount[i][DeadThree] * Rate[i] + 30 * TypeCount[i][DeadTwo] * Rate[i];
     }
 
 #ifdef DEBUG
@@ -514,6 +532,51 @@ int GAMECONTROL::EvaluateBoard(ofstream &fout)
 #endif
 
     return Value[GameInfo.Player] - Value[GameInfo.Rival];
+}
+
+bool GAMEINFO::isGameOver()
+{
+    for (int y = GameInfo.BoardStart.second; y <= GameInfo.BoardEnd.second; y++)
+    {
+        for (int x = GameInfo.BoardStart.first; x <= GameInfo.BoardEnd.first; x++)
+        {
+            if (GameInfo.Board[x][y] == EMPTY)
+                continue;
+
+            if (x + 4 < GAMEBOARD_SIZE)
+            {
+                if (GameInfo.Board[x][y] == GameInfo.Board[x + 1][y] && GameInfo.Board[x][y] == GameInfo.Board[x + 2][y] && GameInfo.Board[x][y] == GameInfo.Board[x + 3][y] && GameInfo.Board[x][y] == GameInfo.Board[x + 4][y])
+                {
+                    return true;
+                }
+
+                if (y + 4 < GAMEBOARD_SIZE)
+                {
+                    if (GameInfo.Board[x][y] == GameInfo.Board[x + 1][y + 1] && GameInfo.Board[x][y] == GameInfo.Board[x + 2][y + 2] && GameInfo.Board[x][y] == GameInfo.Board[x + 3][y + 3] && GameInfo.Board[x][y] == GameInfo.Board[x + 4][y + 4])
+                    {
+                        return true;
+                    }
+                }
+            }
+            if (y + 4 < GAMEBOARD_SIZE)
+            {
+                if (GameInfo.Board[x][y] == GameInfo.Board[x][y + 1] && GameInfo.Board[x][y] == GameInfo.Board[x][y + 2] && GameInfo.Board[x][y] == GameInfo.Board[x][y + 3] && GameInfo.Board[x][y] == GameInfo.Board[x][y + 4])
+                {
+                    return true;
+                }
+
+                if (x >= 4)
+                {
+                    if (GameInfo.Board[x][y] == GameInfo.Board[x - 1][y + 1] && GameInfo.Board[x][y] == GameInfo.Board[x - 2][y + 2] && GameInfo.Board[x][y] == GameInfo.Board[x - 3][y + 3] && GameInfo.Board[x][y] == GameInfo.Board[x - 4][y + 4])
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
@@ -553,6 +616,7 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
                     GameInfo.BoardAddSpot(make_pair(x, y), GameInfo.Player);
 
                     EvaluateValue = Minimax(Depth - 1, false, fout);
+                    EvaluateValue.first = GameInfo.isGameOver() ? INT_MIN : EvaluateValue.first;
                     if (EvaluateValue.first > value.first)
                     {
                         value.first = EvaluateValue.first;
@@ -584,7 +648,8 @@ NODE GAMECONTROL::Minimax(int Depth, bool maximizingPlayer, ofstream &fout)
                     POINT tempEnd = GameInfo.BoardEnd;
                     GameInfo.BoardAddSpot(make_pair(x, y), GameInfo.Rival);
 
-                    EvaluateValue = Minimax(Depth - 1, false, fout);
+                    EvaluateValue = Minimax(Depth - 1, true, fout);
+                    EvaluateValue.first = GameInfo.isGameOver() ? INT_MAX : EvaluateValue.first;
                     if (EvaluateValue.first < value.first)
                     {
                         value.first = EvaluateValue.first;
@@ -624,6 +689,8 @@ NODE GAMECONTROL::AlphaBeta(int Depth, int a, int b, bool maximizingPlayer, ofst
     if (GameInfo.BoardEnd.second < GAMEBOARD_SIZE - 3)
         SearchYEnd = GameInfo.BoardEnd.second + 3;
 
+    int A = a, B = b;
+
     if (maximizingPlayer)
     {
         NODE EvaluateValue;
@@ -639,22 +706,24 @@ NODE GAMECONTROL::AlphaBeta(int Depth, int a, int b, bool maximizingPlayer, ofst
                     POINT tempEnd = GameInfo.BoardEnd;
                     GameInfo.BoardAddSpot(make_pair(x, y), GameInfo.Player);
 
-                    EvaluateValue = AlphaBeta(Depth - 1, a, b, false, fout);
+                    EvaluateValue = AlphaBeta(Depth - 1, A, B, false, fout);
+                    EvaluateValue.first = GameInfo.isGameOver() ? 1000000 : EvaluateValue.first;
+
                     if (EvaluateValue.first > value.first)
                     {
                         value.first = EvaluateValue.first;
                         value.second.first = x;
                         value.second.second = y;
                     }
-                    if (value.first >= b)
+
+                    if (value.first >= B)
                     {
                         GameInfo.BoardRemoveSpot(make_pair(x, y));
                         GameInfo.BoardStart = tempStart;
                         GameInfo.BoardEnd = tempEnd;
-                        break;
+                        return value;
                     }
-
-                    a = max(a, value.first);
+                    A = max(A, value.first);
 
                     GameInfo.BoardRemoveSpot(make_pair(x, y));
                     GameInfo.BoardStart = tempStart;
@@ -680,7 +749,9 @@ NODE GAMECONTROL::AlphaBeta(int Depth, int a, int b, bool maximizingPlayer, ofst
                     POINT tempEnd = GameInfo.BoardEnd;
                     GameInfo.BoardAddSpot(make_pair(x, y), GameInfo.Rival);
 
-                    EvaluateValue = AlphaBeta(Depth - 1, a, b, true, fout);
+                    EvaluateValue = AlphaBeta(Depth - 1, A, B, true, fout);
+                    // EvaluateValue.first = GameInfo.isGameOver() ? -1000000 : EvaluateValue.first;
+
                     if (EvaluateValue.first < value.first)
                     {
                         value.first = EvaluateValue.first;
@@ -688,15 +759,15 @@ NODE GAMECONTROL::AlphaBeta(int Depth, int a, int b, bool maximizingPlayer, ofst
                         value.second.second = y;
                     }
 
-                    if (value.first <= a)
+                    if (value.first <= A)
                     {
                         GameInfo.BoardRemoveSpot(make_pair(x, y));
                         GameInfo.BoardStart = tempStart;
                         GameInfo.BoardEnd = tempEnd;
-                        break;
+                        return value;
                     }
 
-                    b = min(b, value.first);
+                    B = min(B, value.first);
 
                     GameInfo.BoardRemoveSpot(make_pair(x, y));
                     GameInfo.BoardStart = tempStart;
