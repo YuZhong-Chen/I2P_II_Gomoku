@@ -1,14 +1,14 @@
 ===============================
-|. . . . . . . . . . . . . . .|
-|. . . . . . . . . . . . . . .|
-|. . . . . . . . . . . . . . .|
-|. X . . . . . . . . . . . . .|
-|. O O X O . . . . . . . . . .|
-|. O . X . . . . . . . . . . .|
-|. O O X . . . . . . . . . . .|
-|. O . X . . . . . . . . . . .|
-|. X . . . . . . . . . . . . .|
-|. . . . . . . . . . . . . . .|
+|. . X O X X O O O O X . . . .|
+|. . . O O X X O . O . . . . .|
+|. . O X O O O O X . . . . . .|
+|. . . X . X O X . . O . . . .|
+|. . . O X X X O . X . . . . .|
+|. . . X O X O X X . . . . . .|
+|. . . X O X X X X O . . . . .|
+|. . . . O O X O . O . . . . .|
+|. . . . O O X . O . . . . . .|
+|. . . . X . O . . . . . . . .|
 |. . . . . . . . . . . . . . .|
 |. . . . . . . . . . . . . . .|
 |. . . . . . . . . . . . . . .|
@@ -16,24 +16,22 @@
 |. . . . . . . . . . . . . . .|
 ===============================
 
--7070
-Player Type 1 : 0
+999604
+Player Type 1 : 1
 Player Type 2 : 0
 Player Type 3 : 0
 Player Type 4 : 0
-Player Type 5 : 0
-Player Type 6 : 1
-Player Type 7 : 1
+Player Type 5 : 1
+Player Type 6 : 3
+Player Type 7 : 12
 
 Rival Type 1 : 0
-Rival Type 2 : 1
+Rival Type 2 : 0
 Rival Type 3 : 0
 Rival Type 4 : 0
-Rival Type 5 : 0
-Rival Type 6 : 0
-Rival Type 7 : 1
+Rival Type 5 : 1
+Rival Type 6 : 1
+Rival Type 7 : 6
 
-3 3
-3 2
-3 3
-3 3
+0 0
+0 0
