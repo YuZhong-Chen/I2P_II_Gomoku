@@ -1,2 +1,2 @@
 make
-./MCTS ./Debug_state ./Debug_action
+timeout 10s ./MCTS ./Debug_state ./Debug_action

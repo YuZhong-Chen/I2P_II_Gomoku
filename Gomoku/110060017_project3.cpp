@@ -438,9 +438,9 @@ int GAMECONTROL::EvaluateBoard()
         if (TypeCount[i][FiveInRow] >= 1)
             Value[i] = 1000000 * Rate[i];
         else if (TypeCount[i][LiveFour] >= 2)
-            Value[i] = 8000 * Rate[i];
+            Value[i] = 80000 * Rate[i];
         else if (TypeCount[i][LiveFour] == 1)
-            Value[i] = 6000 * Rate[i];
+            Value[i] = 60000 * Rate[i];
         else if (TypeCount[i][DeadFour] + TypeCount[i][LiveThree] >= 2)
             Value[i] = 3500 * Rate[i];
         else if (TypeCount[i][DeadFour] == 1)

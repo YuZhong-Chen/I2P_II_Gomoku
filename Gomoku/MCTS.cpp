@@ -32,19 +32,33 @@ using POINT = pair<short, short>;
 const short Direction[4][2] = {{1, 0}, {1, -1}, {0, -1}, {-1, -1}};
 const short DirectionReverse[4][2] = {{-1, 0}, {-1, 1}, {0, 1}, {1, 1}};
 
+int totalSimulationCount = 0;
+POINT OverPoint;
+
 void ShowPoint(POINT pt, ofstream &fout);
+
+short min(short a, short b)
+{
+    return (a < b) ? a : b;
+}
+short max(short a, short b)
+{
+    return (a < b) ? b : a;
+}
 
 class NODE
 {
 public:
+    POINT Move;
     POINT BoardStart;
     POINT BoardEnd;
-    short BoardSizeX;
-    short BoardSizeY;
-
     short BoardChessCount;
     map<POINT, short> ChessPoints;
 
+    int depth;
+
+    long long WinCount;
+    int totalSearch;
     vector<NODE> children;
 
     NODE()
@@ -52,14 +66,15 @@ public:
         BoardStart = make_pair(GAMEBOARD_SIZE - 1, GAMEBOARD_SIZE - 1);
         BoardEnd = make_pair(0, 0);
 
-        BoardSizeX = 15;
-        BoardSizeY = 15;
-        BoardChessCount = 0;
+        BoardChessCount = WinCount = totalSearch = depth = 0;
     }
 
-    short Selection();
-    bool RolloutSimulation(bool PlayerTurn);
-    bool isGameOver();
+    void Expansion(ofstream &fout);
+    bool Selection(ofstream &fout);
+    double EvaluateNode(ofstream &fout);
+    bool RolloutSimulation(ofstream &fout);
+    void PrintBoard(ofstream &fout);
+    bool isOver();
 };
 
 class GAMECONTROL
@@ -68,13 +83,12 @@ public:
     short PLAYER;
     short RIVAL;
 
+    short TreeDepth = 0;
     NODE root;
     POINT answer;
 
-    void Selection(ofstream &fout);
-    void Search(POINT pt);
+    void Search(ofstream &fout);
     void ReadBoardFromFile(ifstream &fin);
-    void PrintBoard(ofstream &fout);
     POINT GetRandomPoint(POINT begin, POINT end);
 } GameControl;
 
@@ -94,10 +108,43 @@ int main(int, char **argv)
     {
         srand(time(NULL));
 
-        GameControl.PrintBoard(fout);
+        // int Win = 0, Lose = 0;
 
-        for (int i = 0; i < 10; i++)
-            fout << GameControl.root.RolloutSimulation(true) << "\n";
+        // while (Win + Lose < 100000)
+        // {
+        //     if (GameControl.root.RolloutSimulation(fout))
+        //         Win++;
+        //     else
+        //         Lose++;
+        // }
+        // fout << Win << ' ' << Lose << " " << Win / (double)(Win + Lose) << endl;
+
+        int total = 0;
+        int t = 0;
+        while (true)
+        {
+            if (++total < 5000)
+            {
+                GameControl.root.Selection(fout);
+            }
+            else
+            {
+                GameControl.Search(fout);
+                ShowPoint(GameControl.answer, fout);
+                fout.flush();
+                total = 0;
+                t++;
+            }
+        }
+
+        // fout << "root : " << GameControl.root.WinCount << " " << GameControl.root.totalSearch << " " << GameControl.root.EvaluateNode(fout) << endl;
+
+        // fout << endl;
+        // for (int i = 0; i < GameControl.root.children.size(); i++)
+        // {
+        //     fout << i << " : " << GameControl.root.children[i].WinCount << " " << GameControl.root.children[i].totalSearch << " " << GameControl.root.children[i].EvaluateNode(fout) << endl;
+        //     ShowPoint(GameControl.root.children[i].Move, fout);
+        // }
     }
 
     fin.close();
@@ -108,10 +155,6 @@ int main(int, char **argv)
 void ShowPoint(POINT pt, ofstream &fout)
 {
     fout << pt.second << ' ' << pt.first << '\n';
-}
-
-void GAMECONTROL::Selection(ofstream &fout)
-{
 }
 
 void GAMECONTROL::ReadBoardFromFile(ifstream &fin)
@@ -143,18 +186,138 @@ void GAMECONTROL::ReadBoardFromFile(ifstream &fin)
     }
 }
 
-void GAMECONTROL::Search(POINT pt)
+void GAMECONTROL::Search(ofstream &fout)
 {
+    root.Selection(fout);
+
+    short size = root.children.size();
+    int ChooseChild;
+    double ChooseValue = -1;
+    double value;
+
+    for (int i = 0; i < size; i++)
+    {
+        // value = root.children[i].totalSearch;
+        value = root.children[i].EvaluateNode(fout);
+
+        if (value > ChooseValue)
+        {
+            ChooseChild = i;
+            ChooseValue = value;
+        }
+    }
+
+    answer = root.children[ChooseChild].Move;
 }
 
-void GAMECONTROL::PrintBoard(ofstream &fout)
+bool NODE::Selection(ofstream &fout)
+{
+    if (children.empty())
+    {
+        Expansion(fout);
+        if (children.empty())
+            return 0;
+
+        if (children[0].RolloutSimulation(fout))
+            children[0].WinCount += 1;
+
+        children[0].totalSearch++;
+        totalSearch++;
+        WinCount += children[0].WinCount;
+
+        return (children[0].WinCount == 1);
+    }
+
+    short size = children.size();
+    int ChooseChild;
+    double ChooseValue = -1;
+    double value;
+
+    for (int i = 0; i < size; i++)
+    {
+        value = children[i].EvaluateNode(fout);
+
+        if (value > ChooseValue)
+        {
+            ChooseChild = i;
+            ChooseValue = value;
+
+            if (value == numeric_limits<double>::max())
+                break;
+        }
+    }
+
+    if (value == numeric_limits<double>::max())
+    {
+        if (children[ChooseChild].RolloutSimulation(fout))
+            children[ChooseChild].WinCount += 1;
+
+        children[ChooseChild].totalSearch++;
+        totalSearch++;
+        WinCount += children[0].WinCount;
+
+        return (children[0].WinCount == 1);
+    }
+    else
+    {
+        totalSearch++;
+        if (children[ChooseChild].Selection(fout))
+        {
+            WinCount += 1;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+}
+
+void NODE::Expansion(ofstream &fout)
+{
+    NODE temp;
+    temp.BoardChessCount = BoardChessCount + 1;
+    temp.depth = depth + 1;
+
+    children.clear();
+
+    POINT BoardRangeStart;
+    POINT BoardRangeEnd;
+    BoardRangeStart.first = (BoardStart.first >= 1) ? BoardStart.first - 1 : 0;
+    BoardRangeStart.second = (BoardStart.second >= 1) ? BoardStart.second - 1 : 0;
+    BoardRangeEnd.first = (BoardEnd.first < GAMEBOARD_SIZE - 1) ? BoardEnd.first + 1 : GAMEBOARD_SIZE - 1;
+    BoardRangeEnd.second = (BoardEnd.second < GAMEBOARD_SIZE - 1) ? BoardEnd.second + 1 : GAMEBOARD_SIZE - 1;
+
+    for (int y = BoardRangeStart.second; y <= BoardRangeEnd.second; y++)
+    {
+        for (int x = BoardRangeStart.first; x <= BoardRangeEnd.first; x++)
+        {
+            if (ChessPoints.find(make_pair(x, y)) == ChessPoints.end())
+            {
+                temp.Move = make_pair(x, y);
+
+                temp.BoardStart.first = min(BoardStart.first, x);
+                temp.BoardStart.second = min(BoardStart.second, y);
+                temp.BoardEnd.first = max(BoardEnd.first, x);
+                temp.BoardEnd.second = max(BoardEnd.second, y);
+
+                temp.ChessPoints = ChessPoints;
+                temp.ChessPoints.insert(make_pair(make_pair(x, y), (depth % 2 == 0) ? GameControl.PLAYER : GameControl.RIVAL));
+
+                children.push_back(temp);
+            }
+        }
+    }
+}
+
+void NODE::PrintBoard(ofstream &fout)
 {
     array<array<short, GAMEBOARD_SIZE>, GAMEBOARD_SIZE> Board;
     for (int y = 0; y < GAMEBOARD_SIZE; y++)
         for (int x = 0; x < GAMEBOARD_SIZE; x++)
             Board[x][y] = EMPTY;
 
-    for (auto it : root.ChessPoints)
+    for (auto it : ChessPoints)
         Board[it.first.first][it.first.second] = it.second;
 
     fout << "===============================\n";
@@ -183,8 +346,10 @@ POINT GAMECONTROL::GetRandomPoint(POINT begin, POINT end)
     return make_pair(rand() % (end.first - begin.first + 1) + begin.first, rand() % (end.second - begin.second + 1) + begin.second);
 }
 
-bool NODE::RolloutSimulation(bool PlayerTurn)
+bool NODE::RolloutSimulation(ofstream &fout)
 {
+    totalSimulationCount++;
+
     array<array<short, GAMEBOARD_SIZE>, GAMEBOARD_SIZE> Board;
     for (int y = 0; y < GAMEBOARD_SIZE; y++)
         for (int x = 0; x < GAMEBOARD_SIZE; x++)
@@ -193,13 +358,53 @@ bool NODE::RolloutSimulation(bool PlayerTurn)
     for (auto it : ChessPoints)
         Board[it.first.first][it.first.second] = it.second;
 
-    short turn = PlayerTurn ? GameControl.PLAYER : GameControl.RIVAL;
+    short turn = (depth % 2 == 1) ? GameControl.PLAYER : GameControl.RIVAL;
     POINT pt;
     short L_count, R_count;
     short totalChess = BoardChessCount;
 
-    POINT BoardRangeStart = BoardStart;
-    POINT BoardRangeEnd = BoardEnd;
+    for (int y = BoardStart.second; y <= BoardEnd.second; y++)
+    {
+        for (int x = BoardStart.first; x < BoardEnd.first; x++)
+        {
+            if (Board[x][y] == EMPTY)
+                continue;
+
+            if (x + 4 < GAMEBOARD_SIZE)
+            {
+                if (Board[x][y] == Board[x + 1][y] && Board[x][y] == Board[x + 2][y] && Board[x][y] == Board[x + 3][y] && Board[x][y] == Board[x + 4][y])
+                {
+                    return (Board[OverPoint.first][OverPoint.second] == GameControl.PLAYER);
+                }
+
+                if (y + 4 < GAMEBOARD_SIZE)
+                {
+                    if (Board[x][y] == Board[x + 1][y + 1] && Board[x][y] == Board[x + 2][y + 2] && Board[x][y] == Board[x + 3][y + 3] && Board[x][y] == Board[x + 4][y + 4])
+                    {
+                        return (Board[OverPoint.first][OverPoint.second] == GameControl.PLAYER);
+                    }
+                }
+            }
+            if (y + 4 < GAMEBOARD_SIZE)
+            {
+                if (Board[x][y] == Board[x][y + 1] && Board[x][y] == Board[x][y + 2] && Board[x][y] == Board[x][y + 3] && Board[x][y] == Board[x][y + 4])
+                {
+                    return (Board[OverPoint.first][OverPoint.second] == GameControl.PLAYER);
+                }
+
+                if (x >= 4)
+                {
+                    if (Board[x][y] == Board[x - 1][y + 1] && Board[x][y] == Board[x - 2][y + 2] && Board[x][y] == Board[x - 3][y + 3] && Board[x][y] == Board[x - 4][y + 4])
+                    {
+                        return (Board[OverPoint.first][OverPoint.second] == GameControl.PLAYER);
+                    }
+                }
+            }
+        }
+    }
+
+    POINT BoardRangeStart;
+    POINT BoardRangeEnd;
     BoardRangeStart.first = (BoardStart.first >= 2) ? BoardStart.first - 2 : 0;
     BoardRangeStart.second = (BoardStart.second >= 2) ? BoardStart.second - 2 : 0;
     BoardRangeEnd.first = (BoardEnd.first < GAMEBOARD_SIZE - 2) ? BoardEnd.first + 2 : GAMEBOARD_SIZE - 1;
@@ -229,6 +434,7 @@ bool NODE::RolloutSimulation(bool PlayerTurn)
                 BoardRangeStart.second = (BoardStart.second >= 2) ? BoardStart.second - 2 : 0;
                 BoardRangeEnd.first = (BoardEnd.first < GAMEBOARD_SIZE - 2) ? BoardEnd.first + 2 : GAMEBOARD_SIZE - 1;
                 BoardRangeEnd.second = (BoardEnd.second < GAMEBOARD_SIZE - 2) ? BoardEnd.second + 2 : GAMEBOARD_SIZE - 1;
+
                 break;
             }
         }
@@ -257,5 +463,70 @@ bool NODE::RolloutSimulation(bool PlayerTurn)
         turn = 3 - turn;
     }
 
-    return true;
+    return false;
+}
+
+bool NODE::isOver()
+{
+    array<array<short, GAMEBOARD_SIZE>, GAMEBOARD_SIZE> Board;
+    for (int y = 0; y < GAMEBOARD_SIZE; y++)
+        for (int x = 0; x < GAMEBOARD_SIZE; x++)
+            Board[x][y] = EMPTY;
+
+    for (auto it : ChessPoints)
+        Board[it.first.first][it.first.second] = it.second;
+
+    for (int y = 0; y < GAMEBOARD_SIZE; y++)
+    {
+        for (int x = 0; x < GAMEBOARD_SIZE; x++)
+        {
+            if (Board[x][y] == EMPTY)
+                continue;
+
+            if (x + 4 < GAMEBOARD_SIZE)
+            {
+                if (Board[x][y] == Board[x + 1][y] && Board[x][y] == Board[x + 2][y] && Board[x][y] == Board[x + 3][y] && Board[x][y] == Board[x + 4][y])
+                {
+                    OverPoint = make_pair(x, y);
+                    return true;
+                }
+
+                if (y + 4 < GAMEBOARD_SIZE)
+                {
+                    if (Board[x][y] == Board[x + 1][y + 1] && Board[x][y] == Board[x + 2][y + 2] && Board[x][y] == Board[x + 3][y + 3] && Board[x][y] == Board[x + 4][y + 4])
+                    {
+                        OverPoint = make_pair(x, y);
+                        return true;
+                    }
+                }
+            }
+            if (y + 4 < GAMEBOARD_SIZE)
+            {
+                if (Board[x][y] == Board[x][y + 1] && Board[x][y] == Board[x][y + 2] && Board[x][y] == Board[x][y + 3] && Board[x][y] == Board[x][y + 4])
+                {
+                    OverPoint = make_pair(x, y);
+                    return true;
+                }
+
+                if (x >= 4)
+                {
+                    if (Board[x][y] == Board[x - 1][y + 1] && Board[x][y] == Board[x - 2][y + 2] && Board[x][y] == Board[x - 3][y + 3] && Board[x][y] == Board[x - 4][y + 4])
+                    {
+                        OverPoint = make_pair(x, y);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+double NODE::EvaluateNode(ofstream &fout)
+{
+    if (totalSearch == 0)
+        return numeric_limits<double>::max();
+
+    return ((WinCount / (double)totalSearch) + sqrt(2 * log(totalSimulationCount) / (double)totalSearch));
 }

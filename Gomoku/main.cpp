@@ -8,7 +8,7 @@
 
 // #define SHOW_PROCESS
 
-#define TIMEOUT 10
+#define TIMEOUT 15
 
 struct Point
 {
